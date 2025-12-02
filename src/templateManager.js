@@ -424,6 +424,67 @@ export default class TemplateManager {
         // If none of the template colors are disabled, then draw the image normally
         if (!hasDisabled) {
           context.drawImage(template.bitmap, Number(template.pixelCoords[0]) * this.drawMult, Number(template.pixelCoords[1]) * this.drawMult);
+
+          // Draw borders around visible pixels that need painting
+          if (tilePixels) {
+            const tempW = template.bitmap.width;
+            const tempH = template.bitmap.height;
+            const tempCanvas = new OffscreenCanvas(tempW, tempH);
+            const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+            tempCtx.imageSmoothingEnabled = false;
+            tempCtx.clearRect(0, 0, tempW, tempH);
+            tempCtx.drawImage(template.bitmap, 0, 0);
+            const tempData = tempCtx.getImageData(0, 0, tempW, tempH).data;
+
+            const offsetX = Number(template.pixelCoords[0]) * this.drawMult;
+            const offsetY = Number(template.pixelCoords[1]) * this.drawMult;
+
+            for (let y = 0; y < tempH; y++) {
+              for (let x = 0; x < tempW; x++) {
+                // Only check center pixels
+                if ((x % this.drawMult) !== 1 || (y % this.drawMult) !== 1) { continue; }
+
+                const idx = (y * tempW + x) * 4;
+                const templateR = tempData[idx];
+                const templateG = tempData[idx + 1];
+                const templateB = tempData[idx + 2];
+                const templateA = tempData[idx + 3];
+
+                // Skip invisible template pixels
+                if (templateA === 0) { continue; }
+
+                const gx = x + offsetX;
+                const gy = y + offsetY;
+
+                // Skip if out of bounds
+                if (gx < 0 || gy < 0 || gx >= drawSize || gy >= drawSize) { continue; }
+
+                // Get the actual canvas pixel
+                const canvasIdx = (gy * drawSize + gx) * 4;
+                const canvasR = tilePixels[canvasIdx];
+                const canvasG = tilePixels[canvasIdx + 1];
+                const canvasB = tilePixels[canvasIdx + 2];
+                const canvasA = tilePixels[canvasIdx + 3];
+
+                // Check if pixel needs painting (unpainted or wrong color)
+                const isUnpainted = canvasA < 64;
+                const isWrongColor = !isUnpainted &&
+                  (canvasR !== templateR || canvasG !== templateG || canvasB !== templateB);
+
+                // Only draw border if pixel needs attention
+                if (isUnpainted || isWrongColor) {
+                  context.fillStyle = 'rgba(255, 255, 255, 1)';
+                  for (let by = -1; by <= 1; by++) {
+                    for (let bx = -1; bx <= 1; bx++) {
+                      // Skip the center pixel
+                      if (bx === 0 && by === 0) { continue; }
+                      context.fillRect(gx + bx, gy + by, 1, 1);
+                    }
+                  }
+                }
+              }
+            }
+          }
         } else {
           // ELSE we need to apply the color filter
 
@@ -476,6 +537,58 @@ export default class TemplateManager {
           // Draws the template with somes colors disabled
           filterCtx.putImageData(img, 0, 0);
           context.drawImage(filterCanvas, Number(template.pixelCoords[0]) * this.drawMult, Number(template.pixelCoords[1]) * this.drawMult);
+
+          // Draw borders around visible pixels that need painting
+          if (tilePixels) {
+            const offsetX = Number(template.pixelCoords[0]) * this.drawMult;
+            const offsetY = Number(template.pixelCoords[1]) * this.drawMult;
+
+            for (let y = 0; y < tempH; y++) {
+              for (let x = 0; x < tempW; x++) {
+                // Only check center pixels
+                if ((x % this.drawMult) !== 1 || (y % this.drawMult) !== 1) { continue; }
+
+                const idx = (y * tempW + x) * 4;
+                const templateR = data[idx];
+                const templateG = data[idx + 1];
+                const templateB = data[idx + 2];
+                const templateA = data[idx + 3];
+
+                // Skip invisible template pixels (after color filter)
+                if (templateA === 0) { continue; }
+
+                const gx = x + offsetX;
+                const gy = y + offsetY;
+
+                // Skip if out of bounds
+                if (gx < 0 || gy < 0 || gx >= drawSize || gy >= drawSize) { continue; }
+
+                // Get the actual canvas pixel
+                const canvasIdx = (gy * drawSize + gx) * 4;
+                const canvasR = tilePixels[canvasIdx];
+                const canvasG = tilePixels[canvasIdx + 1];
+                const canvasB = tilePixels[canvasIdx + 2];
+                const canvasA = tilePixels[canvasIdx + 3];
+
+                // Check if pixel needs painting (unpainted or wrong color)
+                const isUnpainted = canvasA < 64;
+                const isWrongColor = !isUnpainted &&
+                  (canvasR !== templateR || canvasG !== templateG || canvasB !== templateB);
+
+                // Only draw border if pixel needs attention
+                if (isUnpainted || isWrongColor) {
+                  context.fillStyle = 'rgba(255, 255, 255, 1)';
+                  for (let by = -1; by <= 1; by++) {
+                    for (let bx = -1; bx <= 1; bx++) {
+                      // Skip the center pixel
+                      if (bx === 0 && by === 0) { continue; }
+                      context.fillRect(gx + bx, gy + by, 1, 1);
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       } catch (exception) {
 
@@ -484,6 +597,69 @@ export default class TemplateManager {
 
         // Fallback to drawing raw bitmap if filtering fails
         context.drawImage(template.bitmap, Number(template.pixelCoords[0]) * this.drawMult, Number(template.pixelCoords[1]) * this.drawMult);
+
+        // Draw borders around visible pixels that need painting (fallback)
+        if (tilePixels) {
+          try {
+            const tempW = template.bitmap.width;
+            const tempH = template.bitmap.height;
+            const tempCanvas = new OffscreenCanvas(tempW, tempH);
+            const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+            tempCtx.imageSmoothingEnabled = false;
+            tempCtx.clearRect(0, 0, tempW, tempH);
+            tempCtx.drawImage(template.bitmap, 0, 0);
+            const tempData = tempCtx.getImageData(0, 0, tempW, tempH).data;
+
+            const offsetX = Number(template.pixelCoords[0]) * this.drawMult;
+            const offsetY = Number(template.pixelCoords[1]) * this.drawMult;
+
+            for (let y = 0; y < tempH; y++) {
+              for (let x = 0; x < tempW; x++) {
+                // Only check center pixels
+                if ((x % this.drawMult) !== 1 || (y % this.drawMult) !== 1) { continue; }
+
+                const idx = (y * tempW + x) * 4;
+                const templateR = tempData[idx];
+                const templateG = tempData[idx + 1];
+                const templateB = tempData[idx + 2];
+                const templateA = tempData[idx + 3];
+
+                // Skip invisible template pixels
+                if (templateA === 0) { continue; }
+
+                const gx = x + offsetX;
+                const gy = y + offsetY;
+
+                // Skip if out of bounds
+                if (gx < 0 || gy < 0 || gx >= drawSize || gy >= drawSize) { continue; }
+
+                // Get the actual canvas pixel
+                const canvasIdx = (gy * drawSize + gx) * 4;
+                const canvasR = tilePixels[canvasIdx];
+                const canvasG = tilePixels[canvasIdx + 1];
+                const canvasB = tilePixels[canvasIdx + 2];
+                const canvasA = tilePixels[canvasIdx + 3];
+
+                // Check if pixel needs painting (unpainted or wrong color)
+                const isUnpainted = canvasA < 64;
+                const isWrongColor = !isUnpainted &&
+                  (canvasR !== templateR || canvasG !== templateG || canvasB !== templateB);
+
+                // Only draw border if pixel needs attention
+                if (isUnpainted || isWrongColor) {
+                  context.fillStyle = 'rgba(255, 255, 255, 1)';
+                  for (let by = -1; by <= 1; by++) {
+                    for (let bx = -1; bx <= 1; bx++) {
+                      // Skip the center pixel
+                      if (bx === 0 && by === 0) { continue; }
+                      context.fillRect(gx + bx, gy + by, 1, 1);
+                    }
+                  }
+                }
+              }
+            }
+          } catch (ignored) {}
+        }
       }
     }
 
