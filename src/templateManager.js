@@ -473,7 +473,11 @@ export default class TemplateManager {
 
                 // Only draw border if pixel needs attention
                 if (isUnpainted || isWrongColor) {
-                  context.fillStyle = 'rgba(255, 255, 255, 1)';
+                  // Calculate inverse color for better visibility
+                  const invR = 255 - templateR;
+                  const invG = 255 - templateG;
+                  const invB = 255 - templateB;
+                  context.fillStyle = `rgba(${invR}, ${invG}, ${invB}, 1)`;
                   for (let by = -1; by <= 1; by++) {
                     for (let bx = -1; bx <= 1; bx++) {
                       // Skip the center pixel
@@ -577,7 +581,11 @@ export default class TemplateManager {
 
                 // Only draw border if pixel needs attention
                 if (isUnpainted || isWrongColor) {
-                  context.fillStyle = 'rgba(255, 255, 255, 1)';
+                  // Calculate inverse color for better visibility
+                  const invR = 255 - templateR;
+                  const invG = 255 - templateG;
+                  const invB = 255 - templateB;
+                  context.fillStyle = `rgba(${invR}, ${invG}, ${invB}, 1)`;
                   for (let by = -1; by <= 1; by++) {
                     for (let bx = -1; bx <= 1; bx++) {
                       // Skip the center pixel
@@ -647,7 +655,11 @@ export default class TemplateManager {
 
                 // Only draw border if pixel needs attention
                 if (isUnpainted || isWrongColor) {
-                  context.fillStyle = 'rgba(255, 255, 255, 1)';
+                  // Calculate inverse color for better visibility
+                  const invR = 255 - templateR;
+                  const invG = 255 - templateG;
+                  const invB = 255 - templateB;
+                  context.fillStyle = `rgba(${invR}, ${invG}, ${invB}, 1)`;
                   for (let by = -1; by <= 1; by++) {
                     for (let bx = -1; bx <= 1; bx++) {
                       // Skip the center pixel
